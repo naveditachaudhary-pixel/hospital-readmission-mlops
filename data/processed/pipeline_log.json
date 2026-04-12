@@ -1,0 +1,32 @@
+{
+  "run_timestamp": "2026-04-12T18:28:00.624478",
+  "raw_path": "data/raw/diabetic_data.csv",
+  "processed_path": "data/processed/diabetic_data_clean.csv",
+  "raw_shape": [
+    101766,
+    50
+  ],
+  "processed_shape": [
+    101766,
+    46
+  ],
+  "null_counts": {
+    "race": 2273,
+    "weight": 98569,
+    "payer_code": 40256,
+    "medical_specialty": 49949,
+    "diag_1": 21,
+    "diag_2": 358,
+    "diag_3": 1423,
+    "max_glu_serum": 96420,
+    "A1Cresult": 84748
+  },
+  "class_distribution": {
+    "NO": 54864,
+    ">30": 35545,
+    "<30": 11357
+  },
+  "features_engineered": [
+    "treatment_intensity"
+  ]
+}

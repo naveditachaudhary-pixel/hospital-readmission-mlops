@@ -60,5 +60,17 @@ streamlit run src/app.py
 ```
 Navigate to `http://localhost:8501` to randomly sample patients and simulate real-time model inference.
 
+## 📉 Challenges Solved
+1. **Missing Data:** Handled systematically by imputing missing numeric features using their median, and categorical features via mode.
+2. **Class Imbalance:** Significant imbalance existed between the 'Early Readmission' positive targets vs negatives. We fixed this using `scale_pos_weight` inside the XGBoost Champion and strict class balancing during Training pipelines.
+
 ## 📈 Evaluation Metrics
-The predictive models were evaluated using AUC-ROC and Macro F1 scores through a robust 5-fold cross-validation scheme. **XGBoost** outperformed the others to become the Champion Model logged in the Model Registry.
+The predictive models were evaluated using AUC-ROC and Macro F1 scores over a robust 5-fold cross-validation scheme:
+
+| Model | AUC-ROC | Macro F1 | CV AUC Mean |
+| :--- | :--- | :--- | :--- |
+| **Logistic Regression** (Baseline) | 0.6491 | 0.4834 | 0.6352 |
+| **Random Forest** | 0.6710 | 0.5454 | 0.6551 |
+| **XGBoost** (👑 Champion) | **0.6722** | **0.5574** | **0.6611** |
+
+> XGBoost significantly outperformed the baseline logic to become the registered Champion Model inside our MLflow Registry!

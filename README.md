@@ -74,3 +74,6 @@ The predictive models were evaluated using AUC-ROC and Macro F1 scores over a ro
 | **XGBoost** (👑 Champion) | **0.6722** | **0.5574** | **0.6611** |
 
 > XGBoost significantly outperformed the baseline logic to become the registered Champion Model inside our MLflow Registry!
+
+## 👥 Contributors
+* **Navedita Chaudhary** - *Solo Contributor*

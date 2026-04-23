@@ -10,7 +10,7 @@ Hospital readmissions are incredibly costly and dangerous for patients. This MLO
 *   **Data Pipeline:** `pandas` and `numpy` (Handling missing values, creating clinical features, balancing class weights).
 *   **Modeling:** `scikit-learn` and `xgboost` (Logistic Regression baseline, Random Forest, XGBoost Champion).
 *   **Experiment Tracking & Registry:** `MLflow` (Tracking hyperparams, logging Model AUC-ROC/F1 metrics, and saving model artifacts).
-*   **Live Web App:** `Streamlit` (Interactive clinical prediction UI loading models dynamically from MLflow).
+*   **Live Web App:** `Streamlit` (Interactive clinical prediction UI loading models dynamically from MLflow, featuring local SHAP explainability and a Risk Tier confidence scoring system).
 
 ## 📁 Repository Structure
 ```text
@@ -58,7 +58,7 @@ Navigate to `http://localhost:5000` to compare Logistic Regression, Random Fores
 ```powershell
 streamlit run src/app.py
 ```
-Navigate to `http://localhost:8501` to randomly sample patients and simulate real-time model inference.
+Navigate to `http://localhost:8501` to randomly sample patients and simulate real-time model inference. The app will generate predict probability risk tiers and a live SHAP waterfall plot to explain each clinical decision.
 
 ## 📉 Challenges Solved
 1. **Missing Data:** Handled systematically by imputing missing numeric features using their median, and categorical features via mode.

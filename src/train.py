@@ -123,8 +123,8 @@ if __name__ == "__main__":
                      mlflow.sklearn.log_model)
 
     # ── 2. XGBoost (champion) ──────────────────────────────────────
-    xgb_params = {"max_depth": 6, "learning_rate": 0.1,
-                  "n_estimators": 200, "subsample": 0.8,
+    xgb_params = {"max_depth": 8, "learning_rate": 0.05,
+                  "n_estimators": 300, "subsample": 0.8,
                   "colsample_bytree": 0.8,
                   "scale_pos_weight": scale_pos,
                   "eval_metric": "logloss", "random_state": 42}
@@ -145,6 +145,7 @@ if __name__ == "__main__":
     # ── Register best model ────────────────────────────────────────
     print("\nRegistering XGBoost to Model Registry...")
     runs = mlflow.search_runs(experiment_names=["hospital_readmission_prediction"],
+                              filter_string="tags.model_type = 'XGBoost'",
                               order_by=["metrics.auc_roc DESC"])
     best_run_id = runs.iloc[0]["run_id"]
     model_uri   = f"runs:/{best_run_id}/XGBoost"

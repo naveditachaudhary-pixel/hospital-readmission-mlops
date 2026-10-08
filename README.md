@@ -2,9 +2,6 @@
 
 **End-to-end MLOps pipeline and clinical dashboard for predicting 30-day early hospital readmissions in diabetic patients.**
 
-[![CI Status](https://github.com/naveditachaudhary-pixel/hospital-readmission-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/naveditachaudhary-pixel/hospital-readmission-mlops/actions)
-[![License: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
-
 An end-to-end machine learning pipeline built on the UCI Diabetes 130-US Hospitals dataset (101,766 patient records). It cleans raw clinical data, engineers domain-specific features, tracks training runs with MLflow, and serves real-time risk scores with SHAP explanations via Streamlit.
 
 - **Data Pipeline:** Maps high-cardinality ICD-9 diagnosis codes to 9 clinical categories and engineers encounter metrics (service utilization, emergency ratio, treatment intensity).

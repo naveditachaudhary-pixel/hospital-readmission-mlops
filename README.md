@@ -70,7 +70,7 @@ Models evaluated on a 70/15/15 train/validation/test split:
 |---|---|---|---|---|
 | Logistic Regression | 0.6543 | 0.2006 | 0.4783 | Baseline |
 | Random Forest | 0.6694 | 0.2144 | **0.5196** | Challenger |
-| **HistGradientBoosting** | **0.6804** | **0.2293** | 0.4780 | **👑 Champion Registered** |
+| **HistGradientBoosting** | **0.6804** | **0.2293** | 0.4780 | **Champion Registered** |
 
 - **Test Set AUC-ROC (Champion):** `0.6697`
 - **Test Set Macro F1:** `0.4780`

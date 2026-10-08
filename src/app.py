@@ -7,9 +7,11 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 # ── Page Configuration ─────────────────────────────────────────────
+LOGO_PATH = "assets/logo.png"
+
 st.set_page_config(
-    page_title="Hospital Readmission Risk Predictor",
-    page_icon="🏥",
+    page_title="Hospital Readmission Predictor",
+    page_icon=LOGO_PATH if os.path.exists(LOGO_PATH) else None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -17,52 +19,51 @@ st.set_page_config(
 # Custom CSS for clean healthcare UI
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #0F172A;
-        margin-bottom: 0.1rem;
-    }
-    .sub-header {
-        font-size: 0.95rem;
-        color: #64748B;
+    .header-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
         margin-bottom: 1.25rem;
     }
-    .patient-card {
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+    .header-title {
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: #0F172A;
+        margin: 0;
+    }
+    .header-sub {
+        font-size: 0.95rem;
+        color: #64748B;
+        margin-top: 2px;
     }
     .risk-banner-low {
         background-color: #ECFDF5;
         border: 1px solid #A7F3D0;
         color: #065F46;
-        padding: 12px 18px;
-        border-radius: 10px;
+        padding: 10px 16px;
+        border-radius: 8px;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1rem;
         text-align: center;
     }
     .risk-banner-moderate {
         background-color: #FFFBEB;
         border: 1px solid #FDE68A;
         color: #92400E;
-        padding: 12px 18px;
-        border-radius: 10px;
+        padding: 10px 16px;
+        border-radius: 8px;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1rem;
         text-align: center;
     }
     .risk-banner-high {
         background-color: #FEF2F2;
         border: 1px solid #FECACA;
         color: #991B1B;
-        padding: 12px 18px;
-        border-radius: 10px;
+        padding: 10px 16px;
+        border-radius: 8px;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1rem;
         text-align: center;
     }
     .protocol-card {
@@ -106,23 +107,28 @@ model, model_name, model_metrics = load_champion_model()
 df_clean = load_dataset()
 
 if model is None or df_clean is None:
-    st.error("⚠️ Model or clean dataset missing. Run `python src/data_pipeline.py && python src/train.py` first.")
+    st.error("Model or clean dataset missing. Run `python src/data_pipeline.py && python src/train.py` first.")
     st.stop()
 
 # Sidebar Info
-st.sidebar.title("🏥 Hospital Readmission MLOps")
+st.sidebar.markdown("### Hospital Readmission MLOps")
 st.sidebar.success(f"**Active Model:** {model_name}")
 if "auc_roc" in model_metrics:
     st.sidebar.metric("Validation AUC-ROC", f"{model_metrics['auc_roc']:.4f}")
     st.sidebar.metric("Validation PR-AUC", f"{model_metrics['pr_auc']:.4f}")
-st.sidebar.info(f"**Dataset:** {len(df_clean):,} clinical records")
+st.sidebar.info(f"**Dataset Size:** {len(df_clean):,} clinical records")
 
-# Header
-st.markdown('<div class="main-header">🏥 Hospital Readmission Risk Predictor</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Predicting 30-day early hospital readmissions for diabetic patients</div>', unsafe_allow_html=True)
+# Header with Logo
+head_col1, head_col2 = st.columns([1, 11])
+with head_col1:
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=64)
+with head_col2:
+    st.markdown('<h1 class="header-title">Hospital Readmission Risk Predictor</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="header-sub">Predicting 30-day early hospital readmissions for diabetic patients</p>', unsafe_allow_html=True)
 
 # Tabs
-tab1, tab2, tab3 = st.tabs(["🔮 Patient Risk Scoring", "📊 Model Benchmarks", "🏗️ Pipeline Architecture"])
+tab1, tab2, tab3 = st.tabs(["Patient Risk Scoring", "Model Benchmarks", "Pipeline Architecture"])
 
 # ── TAB 1: Patient Risk Assessment ───────────────────────────────
 with tab1:
@@ -131,14 +137,14 @@ with tab1:
     with col_mode:
         input_mode = st.radio(
             "Select Patient Source:",
-            ["🎲 Sample Real Patient from Dataset", "🎛️ Customize Patient Profile"],
+            ["Sample Real Patient from Dataset", "Customize Patient Profile"],
             horizontal=True
         )
 
-    if input_mode == "🎲 Sample Real Patient from Dataset":
+    if input_mode == "Sample Real Patient from Dataset":
         with col_btn:
             st.write("") # Spacing
-            if st.button("🎲 Sample Random Patient", type="primary", use_container_width=True):
+            if st.button("Sample Random Patient", type="primary", use_container_width=True):
                 st.session_state["patient_idx"] = np.random.randint(0, len(df_clean))
                 
         p_idx = st.session_state.get("patient_idx", 0)
@@ -147,7 +153,7 @@ with tab1:
         y_true = patient_data.get("readmitted", None)
 
         # Patient Summary Card
-        st.markdown(f"#### 👤 Clinical Profile — Patient #{p_idx + 1}")
+        st.markdown(f"#### Clinical Profile — Patient #{p_idx + 1}")
         c1, c2, c3, c4 = st.columns(4)
         
         age_map_rev = {0:"0-10", 1:"10-20", 2:"20-30", 3:"30-40", 4:"40-50", 5:"50-60", 6:"60-70", 7:"70-80", 8:"80-90", 9:"90-100"}
@@ -164,7 +170,7 @@ with tab1:
             st.markdown(f"**Care & Discharge**\n* Diagnoses: `{int(patient_data.get('number_diagnoses', 7))}`\n* Discharge: `{hr_discharge}`")
 
     else:
-        st.markdown("#### 🎛️ Customize Patient Parameters")
+        st.markdown("#### Customize Patient Parameters")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -234,7 +240,7 @@ with tab1:
         banner_class = "risk-banner-high"
 
     # Risk Assessment Output Section
-    st.markdown("### 📋 Risk Assessment Results")
+    st.markdown("### Risk Assessment Results")
     
     r1, r2, r3, r4 = st.columns(4)
     with r1:
@@ -246,7 +252,7 @@ with tab1:
     with r4:
         if y_true is not None:
             gt_text = "Readmitted" if y_true == 1 else "Not Readmitted"
-            gt_delta = "✅ Match" if pred == y_true else "⚠️ Misclassified"
+            gt_delta = "Match" if pred == y_true else "Misclassified"
             st.metric("Ground Truth", gt_text, delta=gt_delta)
         else:
             st.metric("Ground Truth", "Custom Input")
@@ -256,31 +262,30 @@ with tab1:
 
     # Actionable Clinical Protocol Card
     st.markdown('<div class="protocol-card">', unsafe_allow_html=True)
-    st.markdown("#### 🩺 Recommended Clinical Protocol:")
+    st.markdown("#### Recommended Clinical Protocol:")
     if risk_tier == "HIGH RISK":
         st.markdown("""
-        * 🔴 **Mandatory 48-Hour Nurse Phone Call:** Contact patient within 48 hours post-discharge.
-        * 👨‍⚕️ **7-Day Primary Care / Endocrinology Visit:** Schedule follow-up appointment within 7 days.
-        * 💊 **Medication Reconciliation:** Complete pharmacy review for insulin & oral diabetes med compliance.
-        * 📊 **Glucose Log & CGM Tracking:** Provide continuous blood glucose monitoring instructions.
+        * **Mandatory 48-Hour Nurse Phone Call:** Contact patient within 48 hours post-discharge.
+        * **7-Day Primary Care / Endocrinology Visit:** Schedule follow-up appointment within 7 days.
+        * **Medication Reconciliation:** Complete pharmacy review for insulin & oral diabetes med compliance.
+        * **Glucose Log & CGM Tracking:** Provide continuous blood glucose monitoring instructions.
         """)
     elif risk_tier == "MODERATE RISK":
         st.markdown("""
-        * 🟡 **14-Day Outpatient Follow-up:** Schedule primary care appointment within 14 days.
-        * 📞 **Telehealth Check-in:** Conduct routine 7-day post-discharge phone call.
-        * 📋 **Diabetes Care Plan:** Review hyperglycemia/hypoglycemia warning symptoms with patient.
+        * **14-Day Outpatient Follow-up:** Schedule primary care appointment within 14 days.
+        * **Telehealth Check-in:** Conduct routine 7-day post-discharge phone call.
+        * **Diabetes Care Plan:** Review hyperglycemia/hypoglycemia warning symptoms with patient.
         """)
     else:
         st.markdown("""
-        * 🟢 **Standard Discharge Instructions:** Provide standard written discharge summaries and clinic contact numbers.
-        * 🗓️ **Routine 30-Day Appointment:** Schedule regular follow-up visit within 30 days.
+        * **Standard Discharge Instructions:** Provide standard written discharge summaries and clinic contact numbers.
+        * **Routine 30-Day Appointment:** Schedule regular follow-up visit within 30 days.
         """)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Feature Contribution Breakdown
-    st.markdown("### 🔍 Key Clinical Drivers (Feature Importance)")
+    st.markdown("### Key Clinical Drivers (Feature Importance)")
     try:
-        # Calculate feature differences from baseline
         feat_labels = {
             "inpatient_ratio": "Prior Inpatient Stays Ratio",
             "number_inpatient": "Inpatient Stays (Past Year)",
@@ -295,7 +300,6 @@ with tab1:
             "age": "Patient Age Group"
         }
         
-        # Calculate feature importance scores for display
         cols_to_show = [c for c in feat_labels if c in X_sample.columns]
         val_sample = X_sample[cols_to_show].iloc[0]
         val_mean = df_clean[cols_to_show].mean()
@@ -330,7 +334,7 @@ with tab2:
         "Validation PR-AUC": [0.2006, 0.2144, 0.2293],
         "Macro F1": [0.4783, 0.5196, 0.4780],
         "CV AUC Mean": [0.6416, 0.6545, 0.6659],
-        "Status": ["Baseline", "Challenger", "👑 Champion Registered"]
+        "Status": ["Baseline", "Challenger", "Champion Registered"]
     })
     st.dataframe(benchmarks, use_container_width=True)
 
@@ -373,6 +377,6 @@ with tab3:
                     ▼
     ┌───────────────────────────────┐
     │ Streamlit Clinical App        │ (Real-Time Inference & Risk Assessment)
-    └───────────────────────────────┘
+    └───────────────┬───────────────┘
     ```
     """)

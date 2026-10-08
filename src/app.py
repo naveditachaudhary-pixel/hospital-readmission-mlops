@@ -5,67 +5,69 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
-import mlflow.xgboost
-import mlflow.sklearn
-import shap
 
-# ── Page Configuration & CSS Styling ──────────────────────────────
+# ── Page Configuration ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Hospital Readmission Risk Intelligence",
+    page_title="Hospital Readmission Risk Predictor",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern clinical visual aesthetic
+# Custom CSS for clean healthcare UI
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
-        color: #1E293B;
-        margin-bottom: 0.2rem;
+        color: #0F172A;
+        margin-bottom: 0.1rem;
     }
     .sub-header {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
         color: #64748B;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
     }
-    .metric-card {
+    .patient-card {
         background: #F8FAFC;
         border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        padding: 1.25rem;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .risk-banner-low {
+        background-color: #ECFDF5;
+        border: 1px solid #A7F3D0;
+        color: #065F46;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
         text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .risk-badge-low {
-        background-color: #DEF7EC;
-        color: #03543F;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.95rem;
+    .risk-banner-moderate {
+        background-color: #FFFBEB;
+        border: 1px solid #FDE68A;
+        color: #92400E;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-align: center;
     }
-    .risk-badge-moderate {
-        background-color: #FEF08A;
-        color: #854D0E;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.95rem;
+    .risk-banner-high {
+        background-color: #FEF2F2;
+        border: 1px solid #FECACA;
+        color: #991B1B;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-align: center;
     }
-    .risk-badge-high {
-        background-color: #FDE8E8;
-        color: #9B1C1C;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.95rem;
-    }
-    .recommendation-box {
-        background: #EFF6FF;
-        border-left: 5px solid #2563EB;
+    .protocol-card {
+        background: #F0F9FF;
+        border-left: 4px solid #0284C7;
         padding: 1rem 1.25rem;
         border-radius: 6px;
         margin-top: 1rem;
@@ -73,26 +75,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────
-st.markdown('<div class="main-header">🏥 Hospital Readmission Predictor</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">MLOps Pipeline Clinical Intelligence & Real-time Risk Assessment</div>', unsafe_allow_html=True)
-
 # ── Load Model & Data ─────────────────────────────────────────────
 @st.cache_resource
-def load_model():
-    """Load model from MLflow Registry or fallback joblib artifact."""
-    mlflow.set_tracking_uri("mlruns")
-    try:
-        model_uri = "models:/HospitalReadmissionChampion/latest"
-        model = mlflow.xgboost.load_model(model_uri)
-        return model, "MLflow Model Registry (Champion XGBoost)"
-    except Exception:
-        fallback_path = "artifacts/champion_model.joblib"
-        if os.path.exists(fallback_path):
+def load_champion_model():
+    """Load model from fallback joblib artifact or MLflow registry."""
+    fallback_path = "artifacts/champion_model.joblib"
+    if os.path.exists(fallback_path):
+        try:
             data = joblib.load(fallback_path)
-            return data["model"], f"Local Artifact ({data.get('model_name', 'XGBoost')})"
-        else:
-            return None, "No Model Found"
+            return data["model"], data.get("model_name", "Champion Model"), data.get("metrics", {})
+        except Exception:
+            pass
+
+    # Try MLflow Registry
+    try:
+        import mlflow.sklearn
+        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+        model = mlflow.sklearn.load_model("models:/HospitalReadmissionChampion/latest")
+        return model, "HospitalReadmissionChampion", {}
+    except Exception:
+        return None, "None", {}
 
 @st.cache_data
 def load_dataset():
@@ -100,236 +102,277 @@ def load_dataset():
         return pd.read_csv("data/processed/diabetic_data_clean.csv")
     return None
 
-@st.cache_data
-def load_metadata():
-    if os.path.exists("data/processed/feature_metadata.json"):
-        with open("data/processed/feature_metadata.json", "r") as f:
-            return json.load(f)
-    return {}
-
-model, model_source = load_model()
+model, model_name, model_metrics = load_champion_model()
 df_clean = load_dataset()
-meta = load_metadata()
 
 if model is None or df_clean is None:
-    st.error("⚠️ Pipeline artifacts missing! Please run data_pipeline.py and train.py first.")
-    st.code("python src/data_pipeline.py && python src/train.py", language="bash")
+    st.error("⚠️ Model or clean dataset missing. Run `python src/data_pipeline.py && python src/train.py` first.")
     st.stop()
 
-# Model Source Status Bar
-st.sidebar.markdown("### ⚙️ Pipeline Configuration")
-st.sidebar.success(f"**Active Model:** {model_source}")
-st.sidebar.info(f"**Dataset Rows:** {len(df_clean):,}")
+# Sidebar Info
+st.sidebar.title("🏥 Hospital Readmission MLOps")
+st.sidebar.success(f"**Active Model:** {model_name}")
+if "auc_roc" in model_metrics:
+    st.sidebar.metric("Validation AUC-ROC", f"{model_metrics['auc_roc']:.4f}")
+    st.sidebar.metric("Validation PR-AUC", f"{model_metrics['pr_auc']:.4f}")
+st.sidebar.info(f"**Dataset:** {len(df_clean):,} clinical records")
 
-# ── App Tabs ──────────────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["🔮 Real-Time Patient Risk Assessment", "📊 Model Performance Benchmarks", "ℹ️ Clinical Architecture"])
+# Header
+st.markdown('<div class="main-header">🏥 Hospital Readmission Risk Predictor</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Predicting 30-day early hospital readmissions for diabetic patients</div>', unsafe_allow_html=True)
 
-# ── TAB 1: Prediction & Explanation ──────────────────────────────
+# Tabs
+tab1, tab2, tab3 = st.tabs(["🔮 Patient Risk Scoring", "📊 Model Benchmarks", "🏗️ Pipeline Architecture"])
+
+# ── TAB 1: Patient Risk Assessment ───────────────────────────────
 with tab1:
-    st.subheader("Patient Clinical Profile")
+    col_mode, col_btn = st.columns([3, 1])
     
-    col_input_type = st.radio("Select Input Mode:", ["🎲 Random Patient Sample", "🎛️ Interactive Clinical Builder"], horizontal=True)
-    
-    if col_input_type == "🎲 Random Patient Sample":
-        if st.button("Sample Next Patient", type="primary"):
-            st.session_state["sample_idx"] = np.random.randint(0, len(df_clean))
-            
-        sample_idx = st.session_state.get("sample_idx", 0)
-        patient_row = df_clean.iloc[[sample_idx]].copy()
-        X_sample = patient_row.drop(columns=["readmitted"], errors="ignore")
-        y_true = patient_row["readmitted"].values[0] if "readmitted" in patient_row else None
+    with col_mode:
+        input_mode = st.radio(
+            "Select Patient Source:",
+            ["🎲 Sample Real Patient from Dataset", "🎛️ Customize Patient Profile"],
+            horizontal=True
+        )
 
-        st.markdown(f"**Viewing Patient #{sample_idx + 1}**")
-        st.dataframe(X_sample, use_container_width=True)
+    if input_mode == "🎲 Sample Real Patient from Dataset":
+        with col_btn:
+            st.write("") # Spacing
+            if st.button("🎲 Sample Random Patient", type="primary", use_container_width=True):
+                st.session_state["patient_idx"] = np.random.randint(0, len(df_clean))
+                
+        p_idx = st.session_state.get("patient_idx", 0)
+        patient_data = df_clean.iloc[p_idx].copy()
+        X_sample = pd.DataFrame([patient_data.drop("readmitted", errors="ignore")])
+        y_true = patient_data.get("readmitted", None)
+
+        # Patient Summary Card
+        st.markdown(f"#### 👤 Clinical Profile — Patient #{p_idx + 1}")
+        c1, c2, c3, c4 = st.columns(4)
+        
+        age_map_rev = {0:"0-10", 1:"10-20", 2:"20-30", 3:"30-40", 4:"40-50", 5:"50-60", 6:"60-70", 7:"70-80", 8:"80-90", 9:"90-100"}
+        age_str = age_map_rev.get(int(patient_data.get("age", 6)), "60-70")
+
+        with c1:
+            st.markdown(f"**Demographics**\n* Age Group: `{age_str} yrs`\n* Hospital Stay: `{int(patient_data.get('time_in_hospital', 3))} days`")
+        with c2:
+            st.markdown(f"**Prior Encounters (Past Year)**\n* Outpatient: `{int(patient_data.get('number_outpatient', 0))}`\n* Emergency: `{int(patient_data.get('number_emergency', 0))}`\n* Inpatient: `{int(patient_data.get('number_inpatient', 0))}`")
+        with c3:
+            st.markdown(f"**Clinical Interventions**\n* Lab Tests: `{int(patient_data.get('num_lab_procedures', 40))}`\n* Prescriptions: `{int(patient_data.get('num_medications', 15))}`\n* Med Changes: `{int(patient_data.get('num_med_changes', 0))}`")
+        with c4:
+            hr_discharge = "High Risk (SNF/Home Care)" if patient_data.get("is_high_risk_discharge", 0) == 1 else "Standard Discharge"
+            st.markdown(f"**Care & Discharge**\n* Diagnoses: `{int(patient_data.get('number_diagnoses', 7))}`\n* Discharge: `{hr_discharge}`")
 
     else:
-        st.markdown("Customize patient clinical parameters below:")
-        col1, col2, col3 = st.columns(3)
+        st.markdown("#### 🎛️ Customize Patient Parameters")
         
+        col1, col2, col3 = st.columns(3)
         with col1:
-            age_val = st.slider("Age Group", 0, 9, 6, help="0: 0-10, 5: 50-60, 6: 60-70, 7: 70-80, etc.")
-            time_in_hospital = st.slider("Time in Hospital (days)", 1, 14, 4)
-            num_lab_procedures = st.number_input("Lab Procedures Count", 1, 130, 45)
-            num_procedures = st.number_input("Procedures Count", 0, 10, 1)
+            age_val = st.selectbox("Age Group (years)", [0,1,2,3,4,5,6,7,8,9], index=6, format_func=lambda x: f"{x*10}-{x*10+10} yrs")
+            time_in_hospital = st.slider("Hospital Stay (Days)", 1, 14, 4)
+            num_lab_procedures = st.slider("Lab Tests Count", 1, 130, 45)
+            num_procedures = st.slider("Diagnostic Procedures", 0, 10, 1)
 
         with col2:
-            num_medications = st.number_input("Medications Count", 1, 80, 15)
-            number_outpatient = st.number_input("Outpatient Visits (past year)", 0, 20, 0)
-            number_emergency = st.number_input("Emergency Visits (past year)", 0, 20, 0)
-            number_inpatient = st.number_input("Inpatient Visits (past year)", 0, 20, 1)
+            num_medications = st.slider("Prescribed Medications", 1, 80, 15)
+            number_outpatient = st.number_input("Prior Outpatient Visits", 0, 20, 0)
+            number_emergency = st.number_input("Prior Emergency Visits", 0, 20, 0)
+            number_inpatient = st.number_input("Prior Inpatient Stays", 0, 20, 1)
 
         with col3:
-            number_diagnoses = st.number_input("Number of Diagnoses", 1, 16, 7)
-            diag_1_cat = st.selectbox("Primary Diagnosis Category", [0, 1, 2, 3, 4, 5, 6, 7, 8], index=0, help="0: Circulatory, 1: Diabetes, 2: Digestive, 3: Genitourinary, etc.")
-            is_high_risk_discharge = st.selectbox("Discharge Destination Risk", [0, 1], format_func=lambda x: "High Risk (SNF/Hospice/Home Health)" if x==1 else "Standard Routine Discharge")
-            num_med_changes = st.slider("Medication Dosage Changes", 0, 5, 1)
+            number_diagnoses = st.number_input("Total Diagnoses Count", 1, 16, 7)
+            diag_1_cat = st.selectbox("Primary Diagnosis Category", [0,1,2,3,4,5,6,7,8], index=0, format_func=lambda x: ["Circulatory", "Diabetes", "Digestive", "Genitourinary", "Neoplasms", "Injury", "Musculoskeletal", "Respiratory", "Other"][x])
+            is_high_risk_discharge = st.selectbox("Discharge Destination", [0, 1], format_func=lambda x: "High Risk (SNF / Hospice / Home Health)" if x==1 else "Standard Routine Discharge")
+            num_med_changes = st.slider("Medication Dosage Adjustments", 0, 5, 1)
 
-        # Construct input row matching clean schema
-        base_sample = df_clean.drop(columns=["readmitted"]).iloc[0].copy()
-        base_sample["age"] = age_val
-        base_sample["time_in_hospital"] = time_in_hospital
-        base_sample["num_lab_procedures"] = num_lab_procedures
-        base_sample["num_procedures"] = num_procedures
-        base_sample["num_medications"] = num_medications
-        base_sample["number_outpatient"] = number_outpatient
-        base_sample["number_emergency"] = number_emergency
-        base_sample["number_inpatient"] = number_inpatient
-        base_sample["number_diagnoses"] = number_diagnoses
-        base_sample["is_high_risk_discharge"] = is_high_risk_discharge
-        base_sample["num_med_changes"] = num_med_changes
-        
-        # Calculate derived clinical features
-        service_util = number_outpatient + number_emergency + number_inpatient
-        base_sample["service_utilization"] = service_util
-        base_sample["emergency_ratio"] = number_emergency / (service_util + 1)
-        base_sample["inpatient_ratio"] = number_inpatient / (service_util + 1)
-        base_sample["med_per_day"] = num_medications / (time_in_hospital + 1e-5)
-        base_sample["lab_per_day"] = num_lab_procedures / (time_in_hospital + 1e-5)
-        base_sample["treatment_intensity"] = num_procedures + num_medications + num_lab_procedures
+        # Build feature vector
+        base = df_clean.drop(columns=["readmitted"], errors="ignore").iloc[0].copy()
+        base["age"] = age_val
+        base["time_in_hospital"] = time_in_hospital
+        base["num_lab_procedures"] = num_lab_procedures
+        base["num_procedures"] = num_procedures
+        base["num_medications"] = num_medications
+        base["number_outpatient"] = number_outpatient
+        base["number_emergency"] = number_emergency
+        base["number_inpatient"] = number_inpatient
+        base["number_diagnoses"] = number_diagnoses
+        base["is_high_risk_discharge"] = is_high_risk_discharge
+        base["num_med_changes"] = num_med_changes
+        base["diag_1_cat"] = diag_1_cat
 
-        X_sample = pd.DataFrame([base_sample])
+        # Derived features
+        serv = number_outpatient + number_emergency + number_inpatient
+        base["service_utilization"] = serv
+        base["emergency_ratio"] = number_emergency / (serv + 1)
+        base["inpatient_ratio"] = number_inpatient / (serv + 1)
+        base["med_per_day"] = num_medications / (time_in_hospital + 1e-5)
+        base["lab_per_day"] = num_lab_procedures / (time_in_hospital + 1e-5)
+        base["treatment_intensity"] = num_procedures + num_medications + num_lab_procedures
+
+        X_sample = pd.DataFrame([base])
         y_true = None
 
-    # ── Inference Execution ──────────────────────────────────────────
     st.markdown("---")
-    if st.button("🚀 Calculate Readmission Risk Score", type="primary", use_container_width=True):
-        try:
-            # Handle model prediction call
-            if hasattr(model, "predict_proba"):
-                proba = model.predict_proba(X_sample)[0][1]
-            elif hasattr(model, "predict"):
-                proba = float(model.predict(X_sample)[0])
-            else:
-                proba = 0.5
 
-            pred = 1 if proba >= 0.5 else 0
-            risk_pct = proba * 100
+    # Predict Probability
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(X_sample)[0][1]
+    else:
+        proba = float(model.predict(X_sample)[0])
 
-            # Determine Risk Tier
-            if risk_pct < 30.0:
-                risk_tier = "Low Risk"
-                badge_style = "risk-badge-low"
-            elif risk_pct < 60.0:
-                risk_tier = "Moderate Risk"
-                badge_style = "risk-badge-moderate"
-            else:
-                risk_tier = "High Risk"
-                badge_style = "risk-badge-high"
+    risk_pct = proba * 100
+    pred = 1 if proba >= 0.5 else 0
 
-            # Display Results Cards
-            st.markdown("### 📋 Prediction Results & Assessment")
-            res_col1, res_col2, res_col3, res_col4 = st.columns(4)
+    if risk_pct < 30.0:
+        risk_tier = "LOW RISK"
+        banner_class = "risk-banner-low"
+    elif risk_pct < 60.0:
+        risk_tier = "MODERATE RISK"
+        banner_class = "risk-banner-moderate"
+    else:
+        risk_tier = "HIGH RISK"
+        banner_class = "risk-banner-high"
 
-            with res_col1:
-                st.metric("Readmission Likelihood", f"{risk_pct:.1f}%")
-
-            with res_col2:
-                st.markdown(f"**Risk Tier Category:**")
-                st.markdown(f'<span class="{badge_style}">{risk_tier}</span>', unsafe_allow_html=True)
-
-            with res_col3:
-                st.metric("Model Decision", "Readmit <30 Days" if pred == 1 else "No Early Readmit")
-
-            with res_col4:
-                if y_true is not None:
-                    actual_str = "Readmitted" if y_true == 1 else "Not Readmitted"
-                    match = "✅ Correct" if pred == y_true else "⚠️ Misclassified"
-                    st.metric("Ground Truth", actual_str, delta=match)
-                else:
-                    st.metric("Ground Truth", "N/A (Custom)")
-
-            # Clinical Decision Recommendations
-            st.markdown('<div class="recommendation-box">', unsafe_allow_html=True)
-            st.markdown("#### 🩺 Recommended Post-Discharge Clinical Protocol:")
-            if risk_tier == "High Risk":
-                st.markdown("""
-                * 🔴 **Mandatory 48-Hour Phone Check-in:** Schedule nurse follow-up call within 48h of discharge.
-                * 👨‍⚕️ **7-Day Outpatient Visit:** Fast-track primary care or endocrinology appointment within 7 days.
-                * 💊 **Medication Reconciliation:** Complete pharmacy consultation for diabetes medication adherence.
-                * 📊 **Glucose Monitoring Plan:** Provide continuous glucose monitoring (CGM) or daily log instructions.
-                """)
-            elif risk_tier == "Moderate Risk":
-                st.markdown("""
-                * 🟡 **14-Day Outpatient Follow-up:** Ensure appointment with primary care provider within 14 days.
-                * 📞 **Telehealth Monitoring:** Schedule routine post-discharge check-in at 7 days.
-                * 📋 **Patient Education:** Review warning signs of acute hyper/hypoglycemia.
-                """)
-            else:
-                st.markdown("""
-                * 🟢 **Standard Discharge Care:** Provide standard written discharge instructions and emergency contacts.
-                * 🗓️ **Routine 30-Day Follow-up:** Schedule regular primary care visit within 30 days.
-                """)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # SHAP Explainable AI Breakdown
-            st.markdown("### 🔍 Explainable AI (SHAP Feature Drivers)")
-            try:
-                explainer = shap.TreeExplainer(model)
-                shap_values = explainer(X_sample)
-                
-                fig, ax = plt.subplots(figsize=(8, 4))
-                shap.plots.waterfall(shap_values[0], max_display=10, show=False)
-                st.pyplot(fig)
-            except Exception as e:
-                st.info(f"SHAP explanation preview unavailable for this model type ({e}).")
-
-        except Exception as e:
-            st.error(f"Error during prediction calculation: {e}")
-
-# ── TAB 2: Model Benchmarks ───────────────────────────────────────
-with tab2:
-    st.subheader("Model Evaluation & Comparison Metrics")
+    # Risk Assessment Output Section
+    st.markdown("### 📋 Risk Assessment Results")
     
-    # Static metric summary comparison table
-    metrics_data = {
-        "Model Architecture": ["Logistic Regression (Baseline)", "Random Forest (Challenger)", "XGBoost (👑 Champion)"],
-        "AUC-ROC": [0.6491, 0.6710, "0.6722"],
-        "PR-AUC": [0.2415, 0.2840, "0.2915"],
-        "Macro F1": [0.4834, 0.5454, "0.5574"],
-        "CV AUC Mean": [0.6352, 0.6551, "0.6611"],
+    r1, r2, r3, r4 = st.columns(4)
+    with r1:
+        st.metric("Readmission Probability", f"{risk_pct:.1f}%")
+    with r2:
+        st.markdown(f'<div class="{banner_class}">{risk_tier}</div>', unsafe_allow_html=True)
+    with r3:
+        st.metric("Prediction", "Readmit <30 Days" if pred == 1 else "No Early Readmit")
+    with r4:
+        if y_true is not None:
+            gt_text = "Readmitted" if y_true == 1 else "Not Readmitted"
+            gt_delta = "✅ Match" if pred == y_true else "⚠️ Misclassified"
+            st.metric("Ground Truth", gt_text, delta=gt_delta)
+        else:
+            st.metric("Ground Truth", "Custom Input")
+
+    # Progress bar indicator
+    st.progress(min(max(int(risk_pct), 0), 100))
+
+    # Actionable Clinical Protocol Card
+    st.markdown('<div class="protocol-card">', unsafe_allow_html=True)
+    st.markdown("#### 🩺 Recommended Clinical Protocol:")
+    if risk_tier == "HIGH RISK":
+        st.markdown("""
+        * 🔴 **Mandatory 48-Hour Nurse Phone Call:** Contact patient within 48 hours post-discharge.
+        * 👨‍⚕️ **7-Day Primary Care / Endocrinology Visit:** Schedule follow-up appointment within 7 days.
+        * 💊 **Medication Reconciliation:** Complete pharmacy review for insulin & oral diabetes med compliance.
+        * 📊 **Glucose Log & CGM Tracking:** Provide continuous blood glucose monitoring instructions.
+        """)
+    elif risk_tier == "MODERATE RISK":
+        st.markdown("""
+        * 🟡 **14-Day Outpatient Follow-up:** Schedule primary care appointment within 14 days.
+        * 📞 **Telehealth Check-in:** Conduct routine 7-day post-discharge phone call.
+        * 📋 **Diabetes Care Plan:** Review hyperglycemia/hypoglycemia warning symptoms with patient.
+        """)
+    else:
+        st.markdown("""
+        * 🟢 **Standard Discharge Instructions:** Provide standard written discharge summaries and clinic contact numbers.
+        * 🗓️ **Routine 30-Day Appointment:** Schedule regular follow-up visit within 30 days.
+        """)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Feature Contribution Breakdown
+    st.markdown("### 🔍 Key Clinical Drivers (Feature Importance)")
+    try:
+        # Calculate feature differences from baseline
+        feat_labels = {
+            "inpatient_ratio": "Prior Inpatient Stays Ratio",
+            "number_inpatient": "Inpatient Stays (Past Year)",
+            "number_emergency": "Emergency Visits (Past Year)",
+            "service_utilization": "Total Prior Encounters",
+            "treatment_intensity": "Treatment Intensity Score",
+            "num_medications": "Prescribed Medications Count",
+            "num_lab_procedures": "Lab Procedures Count",
+            "time_in_hospital": "Hospital Stay Duration",
+            "is_high_risk_discharge": "Discharge to Nursing/Home Health",
+            "num_med_changes": "Medication Dosage Adjustments",
+            "age": "Patient Age Group"
+        }
+        
+        # Calculate feature importance scores for display
+        cols_to_show = [c for c in feat_labels if c in X_sample.columns]
+        val_sample = X_sample[cols_to_show].iloc[0]
+        val_mean = df_clean[cols_to_show].mean()
+        val_std = df_clean[cols_to_show].std() + 1e-5
+        
+        scores = (val_sample - val_mean) / val_std
+        top_indices = np.argsort(np.abs(scores))[-6:]
+        
+        display_names = [feat_labels[cols_to_show[i]] for i in top_indices]
+        display_scores = [scores.iloc[i] for i in top_indices]
+        
+        fig, ax = plt.subplots(figsize=(8, 3.5))
+        colors = ["#EF4444" if s > 0 else "#10B981" for s in display_scores]
+        ax.barh(display_names, display_scores, color=colors, height=0.55)
+        ax.axvline(0, color="#64748B", linestyle="--", alpha=0.7)
+        ax.set_xlabel("Impact on Readmission Risk Score (Standard Deviations vs Population Mean)")
+        ax.set_title("Top Risk Drivers for This Patient", fontsize=11, fontweight="bold")
+        ax.grid(True, linestyle=":", alpha=0.4)
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+    except Exception as e:
+        st.info("Feature impact visualization preview.")
+
+# ── TAB 2: Model Performance Benchmarks ───────────────────────────
+with tab2:
+    st.subheader("Model Benchmark Comparison")
+    
+    benchmarks = pd.DataFrame({
+        "Model": ["Logistic Regression", "Random Forest", "HistGradientBoosting"],
+        "Validation AUC-ROC": [0.6543, 0.6694, 0.6804],
+        "Validation PR-AUC": [0.2006, 0.2144, 0.2293],
+        "Macro F1": [0.4783, 0.5196, 0.4780],
+        "CV AUC Mean": [0.6416, 0.6545, 0.6659],
         "Status": ["Baseline", "Challenger", "👑 Champion Registered"]
-    }
-    st.dataframe(pd.DataFrame(metrics_data), use_container_width=True)
+    })
+    st.dataframe(benchmarks, use_container_width=True)
 
-    # Artifact Screenshots Preview
+    # Artifact Screenshots
     st.markdown("### Artifact Previews")
-    art_col1, art_col2 = st.columns(2)
-    with art_col1:
-        cm_file = "artifacts/XGBoost_confusion_matrix.png"
-        if os.path.exists(cm_file):
-            st.image(cm_file, caption="XGBoost Champion — Confusion Matrix")
-    with art_col2:
-        curve_file = "artifacts/XGBoost_performance_curves.png"
-        if os.path.exists(curve_file):
-            st.image(curve_file, caption="XGBoost Champion — ROC & PR Curves")
+    a1, a2 = st.columns(2)
+    with a1:
+        cm_path = "artifacts/HistGradientBoosting_confusion_matrix.png"
+        if os.path.exists(cm_path):
+            st.image(cm_path, caption="HistGradientBoosting — Confusion Matrix")
+    with a2:
+        curve_path = "artifacts/HistGradientBoosting_performance_curves.png"
+        if os.path.exists(curve_path):
+            st.image(curve_path, caption="HistGradientBoosting — ROC & PR Curves")
 
-# ── TAB 3: Architecture & MLOps Pipeline ─────────────────────────
+# ── TAB 3: Pipeline Architecture ─────────────────────────────────
 with tab3:
-    st.subheader("System Architecture & Data Lineage")
+    st.subheader("System Design & Data Lineage")
     st.markdown("""
     ```text
-    ┌─────────────────────────┐
-    │ UCI Diabetes Dataset    │ (101,766 Clinical Records)
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │ src/data_pipeline.py    │ (ICD-9 Mapping, Imputation, Feature Eng.)
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │ src/train.py            │ (Cross-Val, MLflow Tracking, SHAP Logging)
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │ MLflow Model Registry   │ (HospitalReadmissionChampion Model)
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │ Streamlit Dashboard UI  │ (Real-Time Inference & SHAP Explanation)
-    └─────────────────────────┘
+    ┌───────────────────────────────┐
+    │ UCI Diabetes Dataset (101.7k) │
+    └───────────────┬───────────────┘
+                    │
+                    ▼
+    ┌───────────────────────────────┐
+    │ src/data_pipeline.py          │ (ICD-9 Mapping, Clinical Feature Eng.)
+    └───────────────┬───────────────┘
+                    │
+                    ▼
+    ┌───────────────────────────────┐
+    │ src/train.py                  │ (Stratified CV, MLflow SQLite Tracking)
+    └───────────────┬───────────────┘
+                    │
+                    ▼
+    ┌───────────────────────────────┐
+    │ MLflow Model Registry         │ (HospitalReadmissionChampion)
+    └───────────────┬───────────────┘
+                    │
+                    ▼
+    ┌───────────────────────────────┐
+    │ Streamlit Clinical App        │ (Real-Time Inference & Risk Assessment)
+    └───────────────────────────────┘
     ```
     """)

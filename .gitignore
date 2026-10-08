@@ -1,9 +1,10 @@
 venv/
+.venv/
 data/raw/
 *.zip
 .ipynb_checkpoints/
 __pycache__/
-
+*.db
 mlruns/
-artifacts/
 .env
+.pytest_cache/

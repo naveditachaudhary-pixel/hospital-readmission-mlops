@@ -1,79 +1,133 @@
-# 🏥 Hospital Readmission Predictor - MLOps Pipeline
+# 🏥 Hospital Readmission Risk Predictor — MLOps Clinical Pipeline
 
-This repository contains an end-to-end Machine Learning pipeline designed to predict early hospital readmissions (<30 days) for diabetic patients using the UCI Diabetes 130-US Hospitals dataset.
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking%20%26%20Registry-0194E2.svg)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B.svg)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-## 🚀 Project Overview
+An end-to-end production-grade Machine Learning and MLOps pipeline to predict **early hospital readmissions (<30 days)** for diabetic patients using the UCI Diabetes 130-US Hospitals clinical dataset (101,766 patient records).
 
-Hospital readmissions are incredibly costly and dangerous for patients. This MLOps project establishes a reproducible pipeline to clean data, train models, track experiments, and serve predictions via a live interactive dashboard.
+---
 
-### 🛠️ Architecture & Technologies
-*   **Data Pipeline:** `pandas` and `numpy` (Handling missing values, creating clinical features, balancing class weights).
-*   **Modeling:** `scikit-learn` and `xgboost` (Logistic Regression baseline, Random Forest, XGBoost Champion).
-*   **Experiment Tracking & Registry:** `MLflow` (Tracking hyperparams, logging Model AUC-ROC/F1 metrics, and saving model artifacts).
-*   **Live Web App:** `Streamlit` (Interactive clinical prediction UI loading models dynamically from MLflow, featuring local SHAP explainability and a Risk Tier confidence scoring system).
+## 📌 Key Highlights & MLOps Features
 
-## 📁 Repository Structure
-```text
-hospital-readmission-mlops/
-├── data/
-│   ├── raw/                 # Raw downloaded diabetic_data.csv
-│   └── processed/           # Cleaned CSV and pipeline logs
-├── src/
-│   ├── data_pipeline.py     # Data cleaning and feature engineering
-│   ├── train.py             # Model training, evaluating, and MLflow logging
-│   └── app.py               # Streamlit extra-credit interactive dashboard
-├── artifacts/               # Generated png screenshots of the UI and MLflow
-├── mlruns/                  # MLflow tracking backend (local)
-└── requirements.txt         # Project dependencies
+- 🏥 **ICD-9 Clinical Category Mapping**: Transforms raw high-cardinality diagnosis codes (`diag_1`, `diag_2`, `diag_3`) into 9 core clinical categories (Circulatory, Diabetes, Respiratory, Digestive, Neoplasms, Injury, Musculoskeletal, Genitourinary, and Other).
+- 🔬 **Clinical Feature Engineering**: Engineers 8 domain features including `service_utilization`, `emergency_ratio`, `inpatient_ratio`, `med_per_day`, `treatment_intensity`, `num_med_changes`, and `is_high_risk_discharge`.
+- 📊 **Robust Model Benchmarking**: Evaluates Logistic Regression, Random Forest, and Gradient Boosting models using 3-fold Stratified Cross-Validation, **PR-AUC (Precision-Recall)**, Brier probability calibration score, AUC-ROC, and F1-macro metrics.
+- 🎯 **MLflow Experiment Tracking & Registry**: Logs model hyperparams, validation curves (ROC/PR curves), confusion matrices, feature artifacts, and automatically registers the champion model (`HospitalReadmissionChampion`).
+- 🖥️ **Interactive Streamlit Web Dashboard**: Features live dual-mode inference (Random Patient Sampling & Interactive Clinical Patient Builder), dynamic Risk Tier categorization (Low, Moderate, High Risk), actionable post-discharge clinical recommendations, and local **SHAP Waterfall plot** explanations.
+
+---
+
+## 🏗️ Architecture & Data Lineage
+
+```mermaid
+flowchart LR
+    A[UCI Diabetes Dataset\n101,766 Patient Records] --> B[Data Pipeline\nsrc/data_pipeline.py]
+    B --> C[Clinical Feature Engineering\nICD-9 Mapping & Imputation]
+    C --> D[Cleaned Dataset\ndata/processed/diabetic_data_clean.csv]
+    D --> E[Model Training & Tracking\nsrc/train.py]
+    E --> F[MLflow Tracking & SQLite DB\nsqlite:///mlflow.db]
+    F --> G[MLflow Model Registry\nHospitalReadmissionChampion]
+    G --> H[Streamlit Web App\nsrc/app.py]
+    H --> I[Live Risk Tier & SHAP Explanation]
 ```
 
-## ⚙️ How to Run Locally
+---
 
-**1. Clone the repository and setup the environment**
-```powershell
+## 📁 Repository Structure
+
+```text
+hospital-readmission-mlops/
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions CI pipeline
+├── artifacts/                   # Saved model artifacts & figure plots
+│   ├── champion_model.joblib    # Fallback champion model joblib file
+│   ├── HistGradientBoosting_confusion_matrix.png
+│   └── HistGradientBoosting_performance_curves.png
+├── data/
+│   ├── raw/                     # Raw dataset (diabetic_data.csv)
+│   └── processed/               # Processed CSV & feature metadata
+│       ├── diabetic_data_clean.csv
+│       ├── feature_metadata.json
+│       └── pipeline_log.json
+├── src/
+│   ├── __init__.py
+│   ├── data_pipeline.py         # Data cleaning & clinical feature engineering
+│   ├── train.py                 # Model training, CV, MLflow tracking & registry
+│   └── app.py                   # Streamlit live interactive dashboard
+├── tests/
+│   └── test_pipeline.py         # Pytest unit tests for preprocessing & schema
+├── requirements.txt             # Cross-platform Python dependencies
+└── README.md                    # Project documentation
+```
+
+---
+
+## 📈 Model Evaluation & Performance Benchmarks
+
+Models were evaluated over a stratified 70/15/15 train/validation/test split with class-imbalance ratio handling:
+
+| Model | Validation AUC-ROC | PR-AUC | Macro F1 | CV AUC Mean | Model Status |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Logistic Regression** (Baseline) | 0.6543 | 0.2006 | 0.4783 | 0.6416 ± 0.006 | Baseline Scaled Model |
+| **Random Forest** (Challenger) | 0.6694 | 0.2144 | **0.5196** | 0.6545 ± 0.004 | Balanced Class Weights |
+| **HistGradientBoosting / XGBoost** | **0.6804** | **0.2293** | 0.4780 | **0.6659 ± 0.004** | 👑 Registered Champion |
+
+---
+
+## ⚡ Quick Start & Execution Guide
+
+### 1. Clone & Set Up Environment
+
+```bash
 git clone https://github.com/naveditachaudhary-pixel/hospital-readmission-mlops.git
 cd hospital-readmission-mlops
-python -m venv venv
-venv\Scripts\activate
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install requirements
 pip install -r requirements.txt
 ```
 
-**2. Run the Data Pipeline**
-```powershell
+### 2. Run Data Cleaning & Feature Engineering
+
+```bash
 python src/data_pipeline.py
 ```
 
-**3. Train Models and Track with MLflow**
-```powershell
+### 3. Train Models & Track Experiments with MLflow
+
+```bash
 python src/train.py
 ```
 
-**4. View MLflow Dashboard**
-```powershell
-mlflow ui
-```
-Navigate to `http://localhost:5000` to compare Logistic Regression, Random Forest, and XGBoost experiments.
+### 4. Launch MLflow Tracking UI
 
-**5. Launch the Streamlit App (Extra Credit)**
-```powershell
+```bash
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+Navigate to `http://localhost:5000` to inspect experiment metrics, artifacts, and registered models.
+
+### 5. Launch the Live Streamlit Dashboard
+
+```bash
 streamlit run src/app.py
 ```
-Navigate to `http://localhost:8501` to randomly sample patients and simulate real-time model inference. The app will generate predict probability risk tiers and a live SHAP waterfall plot to explain each clinical decision.
+Navigate to `http://localhost:8501` to test live patient predictions and view SHAP explanations.
 
-## 📉 Challenges Solved
-1. **Missing Data:** Handled systematically by imputing missing numeric features using their median, and categorical features via mode.
-2. **Class Imbalance:** Significant imbalance existed between the 'Early Readmission' positive targets vs negatives. We fixed this using `scale_pos_weight` inside the XGBoost Champion and strict class balancing during Training pipelines.
+### 6. Run Unit Tests
 
-## 📈 Evaluation Metrics
-The predictive models were evaluated using AUC-ROC and Macro F1 scores over a robust 5-fold cross-validation scheme:
+```bash
+PYTHONPATH=. pytest tests/
+```
 
-| Model | AUC-ROC | Macro F1 | CV AUC Mean |
-| :--- | :--- | :--- | :--- |
-| **Logistic Regression** (Baseline) | 0.6491 | 0.4834 | 0.6352 |
-| **Random Forest** | 0.6710 | 0.5454 | 0.6551 |
-| **XGBoost** (👑 Champion) | **0.6722** | **0.5574** | **0.6611** |
+---
 
-> XGBoost significantly outperformed the baseline logic to become the registered Champion Model inside our MLflow Registry!
+## 📜 License
 
-## 👥 Contributors
-* **Navedita Chaudhary** - *Solo Contributor*
+Distributed under the MIT License.

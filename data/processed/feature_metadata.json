@@ -1,0 +1,52 @@
+{
+  "numeric_features": [
+    "age",
+    "time_in_hospital",
+    "num_lab_procedures",
+    "num_procedures",
+    "num_medications",
+    "number_outpatient",
+    "number_emergency",
+    "number_inpatient",
+    "number_diagnoses",
+    "discharge_disposition_id",
+    "diag_1_cat",
+    "diag_2_cat",
+    "diag_3_cat",
+    "service_utilization",
+    "emergency_ratio",
+    "inpatient_ratio",
+    "med_per_day",
+    "lab_per_day",
+    "treatment_intensity",
+    "is_high_risk_discharge"
+  ],
+  "categorical_mappings": {
+    "age": {
+      "[60-70)": 0,
+      "[70-80)": 1
+    },
+    "diag_1_cat": {
+      "Circulatory": 0,
+      "Diabetes": 1
+    },
+    "diag_2_cat": {
+      "Musculoskeletal": 0,
+      "Respiratory": 1
+    },
+    "diag_3_cat": {
+      "Genitourinary": 0,
+      "Other": 1
+    }
+  },
+  "engineered_features": [
+    "service_utilization",
+    "emergency_ratio",
+    "inpatient_ratio",
+    "med_per_day",
+    "lab_per_day",
+    "treatment_intensity",
+    "is_high_risk_discharge",
+    "num_med_changes"
+  ]
+}
